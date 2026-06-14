@@ -12,6 +12,30 @@ const ADMIN_PASSWORD = "rcgarage2026";
 
 const FONT_LINK = "https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap";
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+const URL_TEST = /^https?:\/\//;
+
+function linkify(text) {
+  if (!text) return text;
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) =>
+    URL_TEST.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: "#D97F4C", textDecoration: "underline", wordBreak: "break-all" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 function StatusBadge({ status }) {
   const style = STATUS_STYLES[status] || STATUS_STYLES.Research;
   return (
@@ -184,7 +208,7 @@ function VehicleCard({ vehicle, expanded, onToggle }) {
                       lineHeight: 1.5,
                     }}
                   >
-                    {item.notes}
+                    {linkify(item.notes)}
                   </span>
                 </div>
               ))}
@@ -269,7 +293,7 @@ function VehicleCard({ vehicle, expanded, onToggle }) {
                   <span style={{ color: "#D97F4C", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span>{entry}</span>
+                  <span>{linkify(entry)}</span>
                 </div>
               ))}
             </div>
@@ -609,7 +633,7 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, onCollapse, saving
                     placeholder="Cost $"
                   />
                 </div>
-                <input style={inputStyle} value={item.notes} onChange={(e) => updateItem(si, ii, "notes", e.target.value)} placeholder="Notes" />
+                <input style={inputStyle} value={item.notes} onChange={(e) => updateItem(si, ii, "notes", e.target.value)} placeholder="Notes (links will become clickable)" />
               </div>
             ))}
             <button style={btnStyle} onClick={() => addItem(si)}>+ Add Part</button>
@@ -622,7 +646,7 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, onCollapse, saving
         <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>Build Log</div>
         {(vehicle.log || []).map((entry, i) => (
           <div key={i} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem" }}>
-            <input style={inputStyle} value={entry} onChange={(e) => updateLog(i, e.target.value)} placeholder="Log entry" />
+            <input style={inputStyle} value={entry} onChange={(e) => updateLog(i, e.target.value)} placeholder="Log entry (links will become clickable)" />
             <button style={dangerBtnStyle} onClick={() => removeLog(i)}>×</button>
           </div>
         ))}
