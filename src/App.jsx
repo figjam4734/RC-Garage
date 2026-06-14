@@ -140,16 +140,42 @@ function VehicleCard({ vehicle, expanded, onToggle }) {
                     borderBottom: i < section.items.length - 1 ? "1px dashed #3A372F" : "none",
                   }}
                 >
-                  <span
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontWeight: 600,
-                      fontSize: "0.9rem",
-                      color: "#EDE6DA",
-                    }}
-                  >
-                    {item.part}
-                  </span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.5rem" }}>
+                    <span
+                      style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        color: "#EDE6DA",
+                      }}
+                    >
+                      {item.part}
+                    </span>
+                    {item.cost != null && item.cost !== "" && (
+                      <span
+                        style={{
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: "0.8rem",
+                          color: "#D97F4C",
+                          flexShrink: 0,
+                        }}
+                      >
+                        ${Number(item.cost).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  {item.partNumber && (
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "0.7rem",
+                        color: "#6E7B8B",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {item.partNumber}
+                    </span>
+                  )}
                   <span
                     style={{
                       fontFamily: "'Inter', sans-serif",
@@ -164,6 +190,52 @@ function VehicleCard({ vehicle, expanded, onToggle }) {
               ))}
             </div>
           ))}
+
+          {(() => {
+            const total = (vehicle.sections || []).reduce(
+              (sum, section) =>
+                sum +
+                (section.items || []).reduce(
+                  (s, item) => s + (item.cost != null && item.cost !== "" ? Number(item.cost) || 0 : 0),
+                  0
+                ),
+              0
+            );
+            return total > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  borderTop: "1px solid #3A372F",
+                  paddingTop: "0.6rem",
+                  marginBottom: "1.25rem",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "0.7rem",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "#8A8377",
+                  }}
+                >
+                  Total Build Cost
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "#D97F4C",
+                  }}
+                >
+                  ${total.toFixed(2)}
+                </span>
+              </div>
+            ) : null;
+          })()}
 
           {vehicle.log && vehicle.log.length > 0 && (
             <div>
@@ -238,7 +310,7 @@ function Header({ count, isAdmin, onNav }) {
             marginBottom: "0.5rem",
           }}
         >
-          Build Sheet - {count} Vehicles
+          Build Sheet — {count} Vehicles
         </div>
         <h1
           style={{
@@ -254,7 +326,7 @@ function Header({ count, isAdmin, onNav }) {
           RC Garage Ledger
         </h1>
         <p style={{ color: "#8A8377", fontSize: "0.9rem", marginTop: "0.5rem" }}>
-          Tap a vehicle to open its build sheet - components, specs, and progress notes.
+          Tap a vehicle to open its build sheet — components, specs, and progress notes.
         </p>
       </div>
       <button
@@ -285,7 +357,7 @@ function GarageView({ vehicles, loading, onNav, isAdmin }) {
   return (
     <PageShell>
       <Header count={vehicles.length} isAdmin={isAdmin} onNav={onNav} />
-      {loading && <p style={{ color: "#8A8377" }}>Loading...</p>}
+      {loading && <p style={{ color: "#8A8377" }}>Loading…</p>}
       {!loading && vehicles.length === 0 && (
         <p style={{ color: "#8A8377" }}>No vehicles yet. Tap "Edit" to add one.</p>
       )}
@@ -517,10 +589,24 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, saving }) {
               <button style={dangerBtnStyle} onClick={() => removeSection(si)}>Remove</button>
             </div>
             {(section.items || []).map((item, ii) => (
-              <div key={ii} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem", alignItems: "center" }}>
-                <input style={inputStyle} value={item.part} onChange={(e) => updateItem(si, ii, "part", e.target.value)} placeholder="Part name" />
+              <div key={ii} style={{ border: "1px solid #2E2C26", borderRadius: "4px", padding: "0.5rem", marginBottom: "0.5rem" }}>
+                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                  <input style={inputStyle} value={item.part} onChange={(e) => updateItem(si, ii, "part", e.target.value)} placeholder="Part name" />
+                  <button style={dangerBtnStyle} onClick={() => removeItem(si, ii)}>×</button>
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem" }}>
+                  <input style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: "0.75rem" }} value={item.partNumber || ""} onChange={(e) => updateItem(si, ii, "partNumber", e.target.value)} placeholder="Part number" />
+                  <input
+                    style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace", fontSize: "0.75rem", maxWidth: "100px" }}
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    value={item.cost ?? ""}
+                    onChange={(e) => updateItem(si, ii, "cost", e.target.value)}
+                    placeholder="Cost $"
+                  />
+                </div>
                 <input style={inputStyle} value={item.notes} onChange={(e) => updateItem(si, ii, "notes", e.target.value)} placeholder="Notes" />
-                <button style={dangerBtnStyle} onClick={() => removeItem(si, ii)}>x</button>
               </div>
             ))}
             <button style={btnStyle} onClick={() => addItem(si)}>+ Add Part</button>
@@ -534,7 +620,7 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, saving }) {
         {(vehicle.log || []).map((entry, i) => (
           <div key={i} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem" }}>
             <input style={inputStyle} value={entry} onChange={(e) => updateLog(i, e.target.value)} placeholder="Log entry" />
-            <button style={dangerBtnStyle} onClick={() => removeLog(i)}>x</button>
+            <button style={dangerBtnStyle} onClick={() => removeLog(i)}>×</button>
           </div>
         ))}
         <button style={btnStyle} onClick={addLog}>+ Add Log Entry</button>
@@ -543,7 +629,7 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, saving }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button style={dangerBtnStyle} onClick={onDelete}>Delete Vehicle</button>
         <button style={primaryBtnStyle} onClick={onSave} disabled={saving}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving…" : "Save"}
         </button>
       </div>
     </div>
