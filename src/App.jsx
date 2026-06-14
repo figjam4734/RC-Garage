@@ -261,6 +261,42 @@ function VehicleCard({ vehicle, expanded, onToggle }) {
             ) : null;
           })()}
 
+          {vehicle.photos && vehicle.photos.length > 0 && (
+            <div style={{ marginBottom: "1.25rem" }}>
+              <div
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "#8A8377",
+                  marginBottom: "0.5rem",
+                  borderBottom: "1px solid #3A372F",
+                  paddingBottom: "0.35rem",
+                }}
+              >
+                Photos
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.6rem" }}>
+                {vehicle.photos.map((photo, i) => (
+                  <div key={i}>
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || "Build photo"}
+                      style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "4px", display: "block", border: "1px solid #3A372F" }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    {photo.caption && (
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: "#8A8377", marginTop: "0.3rem", lineHeight: 1.4 }}>
+                        {photo.caption}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {vehicle.log && vehicle.log.length > 0 && (
             <div>
               <div
@@ -469,6 +505,7 @@ const blankVehicle = () => ({
   summary: "",
   sections: [],
   log: [],
+  photos: [],
   sort_order: 999,
 });
 
@@ -566,6 +603,40 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, onCollapse, saving
   const addLog = () => update("log", [...(vehicle.log || []), ""]);
   const removeLog = (i) => update("log", vehicle.log.filter((_, idx) => idx !== i));
 
+  const [uploading, setUploading] = useState(false);
+
+  const updatePhotoCaption = (i, value) => {
+    const photos = [...(vehicle.photos || [])];
+    photos[i] = { ...photos[i], caption: value };
+    update("photos", photos);
+  };
+
+  const removePhoto = async (i) => {
+    const photos = [...(vehicle.photos || [])];
+    const photo = photos[i];
+    if (photo && photo.path) {
+      await supabase.storage.from("screenshots").remove([photo.path]);
+    }
+    photos.splice(i, 1);
+    update("photos", photos);
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const safeId = (vehicle.id || vehicle.name || "vehicle").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const path = `${safeId}-${Date.now()}.${fileExt}`;
+    const { error } = await supabase.storage.from("screenshots").upload(path, file);
+    if (!error) {
+      const { data } = supabase.storage.from("screenshots").getPublicUrl(path);
+      update("photos", [...(vehicle.photos || []), { url: data.publicUrl, path, caption: "" }]);
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
   return (
     <div
       style={{
@@ -633,7 +704,7 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, onCollapse, saving
                     placeholder="Cost $"
                   />
                 </div>
-                <input style={inputStyle} value={item.notes} onChange={(e) => updateItem(si, ii, "notes", e.target.value)} placeholder="Notes (links will become clickable)" />
+                <input style={inputStyle} value={item.notes} onChange={(e) => updateItem(si, ii, "notes", e.target.value)} placeholder="Notes" />
               </div>
             ))}
             <button style={btnStyle} onClick={() => addItem(si)}>+ Add Part</button>
@@ -643,10 +714,48 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, onCollapse, saving
       </div>
 
       <div style={{ marginBottom: "1.25rem" }}>
+        <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>Photos</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.6rem", marginBottom: "0.6rem" }}>
+          {(vehicle.photos || []).map((photo, i) => (
+            <div key={i} style={{ border: "1px solid #2E2C26", borderRadius: "4px", padding: "0.5rem" }}>
+              <img
+                src={photo.url}
+                alt={photo.caption || "Build photo"}
+                style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: "4px", display: "block", marginBottom: "0.4rem" }}
+              />
+              <input
+                style={{ ...inputStyle, fontSize: "0.75rem", marginBottom: "0.4rem" }}
+                value={photo.caption || ""}
+                onChange={(e) => updatePhotoCaption(i, e.target.value)}
+                placeholder="Caption"
+              />
+              <button style={dangerBtnStyle} onClick={() => removePhoto(i)}>Remove Photo</button>
+            </div>
+          ))}
+        </div>
+        <label
+          style={{
+            ...btnStyle,
+            display: "inline-block",
+            opacity: uploading ? 0.6 : 1,
+          }}
+        >
+          {uploading ? "Uploading…" : "+ Add Photo"}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            disabled={uploading}
+            style={{ display: "none" }}
+          />
+        </label>
+      </div>
+
+      <div style={{ marginBottom: "1.25rem" }}>
         <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>Build Log</div>
         {(vehicle.log || []).map((entry, i) => (
           <div key={i} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.4rem" }}>
-            <input style={inputStyle} value={entry} onChange={(e) => updateLog(i, e.target.value)} placeholder="Log entry (links will become clickable)" />
+            <input style={inputStyle} value={entry} onChange={(e) => updateLog(i, e.target.value)} placeholder="Log entry" />
             <button style={dangerBtnStyle} onClick={() => removeLog(i)}>×</button>
           </div>
         ))}
