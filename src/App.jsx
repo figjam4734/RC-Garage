@@ -496,7 +496,7 @@ const dangerBtnStyle = {
   color: "#D97F4C",
 };
 
-function VehicleEditor({ vehicle, onChange, onDelete, onSave, saving }) {
+function VehicleEditor({ vehicle, onChange, onDelete, onSave, onCollapse, saving }) {
   const update = (field, value) => onChange({ ...vehicle, [field]: value });
 
   const updateSection = (si, field, value) => {
@@ -552,6 +552,9 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, saving }) {
         padding: "1.25rem 1.5rem",
       }}
     >
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.75rem" }}>
+        <button style={btnStyle} onClick={onCollapse}>Collapse</button>
+      </div>
       <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr", marginBottom: "1rem" }}>
         <div>
           <label style={labelStyle}>Vehicle Name</label>
@@ -639,6 +642,7 @@ function VehicleEditor({ vehicle, onChange, onDelete, onSave, saving }) {
 function AdminEditor({ vehicles, setVehicles, onNav }) {
   const [savingIdx, setSavingIdx] = useState(null);
   const [message, setMessage] = useState("");
+  const [expandedIdx, setExpandedIdx] = useState(null);
 
   const updateVehicle = (idx, updated) => {
     setVehicles(vehicles.map((v, i) => (i === idx ? updated : v)));
@@ -677,11 +681,13 @@ function AdminEditor({ vehicles, setVehicles, onNav }) {
       }
     }
     setVehicles(vehicles.filter((_, i) => i !== idx));
+    if (expandedIdx === idx) setExpandedIdx(null);
     setMessage("Deleted.");
   };
 
   const addVehicle = () => {
     setVehicles([...vehicles, blankVehicle()]);
+    setExpandedIdx(vehicles.length);
   };
 
   return (
@@ -692,16 +698,59 @@ function AdminEditor({ vehicles, setVehicles, onNav }) {
           {message}
         </p>
       )}
-      {vehicles.map((vehicle, idx) => (
-        <VehicleEditor
-          key={vehicle.id || `new-${idx}`}
-          vehicle={vehicle}
-          onChange={(v) => updateVehicle(idx, v)}
-          onDelete={() => deleteVehicle(idx)}
-          onSave={() => saveVehicle(idx)}
-          saving={savingIdx === idx}
-        />
-      ))}
+      {vehicles.map((vehicle, idx) =>
+        expandedIdx === idx ? (
+          <VehicleEditor
+            key={vehicle.id || `new-${idx}`}
+            vehicle={vehicle}
+            onChange={(v) => updateVehicle(idx, v)}
+            onDelete={() => deleteVehicle(idx)}
+            onSave={() => saveVehicle(idx)}
+            onCollapse={() => setExpandedIdx(null)}
+            saving={savingIdx === idx}
+          />
+        ) : (
+          <button
+            key={vehicle.id || `new-${idx}`}
+            onClick={() => setExpandedIdx(idx)}
+            style={{
+              width: "100%",
+              textAlign: "left",
+              background: "#26241F",
+              border: "1px solid #3A372F",
+              borderRadius: "4px",
+              marginBottom: "0.75rem",
+              padding: "1rem 1.25rem",
+              cursor: "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+              <span
+                style={{
+                  fontFamily: "'Oswald', sans-serif",
+                  fontSize: "1.1rem",
+                  fontWeight: 600,
+                  letterSpacing: "0.02em",
+                  color: "#EDE6DA",
+                  textTransform: "uppercase",
+                }}
+              >
+                {vehicle.name || "(Untitled Vehicle)"}
+              </span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: "#8A8377" }}>
+                {vehicle.subtitle}
+              </span>
+            </div>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#D97F4C", fontSize: "1.2rem", flexShrink: 0 }}>
+              +
+            </span>
+          </button>
+        )
+      )}
       <button style={primaryBtnStyle} onClick={addVehicle}>+ Add Vehicle</button>
     </PageShell>
   );
